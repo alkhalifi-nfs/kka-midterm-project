@@ -8,10 +8,12 @@ tidak ada angka yang diketik tangan.
   python -m experiments.report_tables --results-dir results --out report/tabel_hasil.md
 
 Masukan (di --results-dir): winrate_matrix.csv, elo.csv (wajib) dan
-search_stats.csv (opsional). Sel tanpa data ditulis "-".
+search_stats.csv (opsional). Dengan --meta <berkas .meta.json dari turnamen>,
+ditambahkan tabel parameter protokol. Sel tanpa data ditulis "-".
 """
 
 import argparse
+import json
 import math
 import os
 from typing import List, Optional
@@ -72,7 +74,37 @@ def search_md(stats: pd.DataFrame) -> str:
                   rows, ["---", "---:", "---:", "---:", "---:", "---:", "---:"])
 
 
-def build_report(results_dir: str) -> str:
+def meta_md(meta: dict) -> str:
+    """Tabel parameter protokol turnamen dari berkas <csv>.meta.json."""
+    time_limit = meta.get("time_limit")
+    runs = meta.get("runs", [])
+    commits = []
+    for r in runs:
+        commit = r.get("git_commit")
+        label = commit[:10] if commit else "tidak tersedia"
+        commits.append(label + (" (ada perubahan belum di-commit)" if r.get("git_dirty") else ""))
+    rows = [
+        ["Agen", ", ".join(meta["agents"])],
+        ["Pasangan agen (round-robin tanpa self-play)", str(meta["pairs"])],
+        ["Pembukaan per seed", str(meta["openings"])],
+        ["Seed", ", ".join(str(s) for s in meta["seeds"])],
+        ["Langkah acak pembukaan", str(meta["opening_plies"])],
+        ["Game per pasangan agen (pembukaan x 2 sisi x seed)", str(meta["openings"] * 2 * len(meta["seeds"]))],
+        ["Total game yang direncanakan", str(meta["games_expected"])],
+        ["Pembukaan berbeda dari yang diminta", f'{meta["distinct_openings"]} dari {meta["requested_openings"]}'],
+        ["Batas kedalaman yang diteruskan ke agen", str(meta["depth"]) if meta.get("depth") is not None else MISSING],
+        ["Batas waktu per langkah (detik)", "tanpa batas" if not time_limit else fmt(time_limit, 2)],
+        ["Batas langkah per game / putaran tabur per giliran", f'{meta["max_game_moves"]} / {meta["max_sow_rounds"]}'],
+        ["Jumlah pemanggilan (termasuk --resume)", str(len(runs))],
+        ["Game dimainkan (jumlah semua pemanggilan)", str(sum(int(r.get("played", 0)) for r in runs))],
+        ["Kalah forfeit (jumlah semua pemanggilan)", str(sum(int(r.get("forfeits", 0)) for r in runs))],
+        ["Commit kode per pemanggilan", "; ".join(commits) if commits else MISSING],
+        ["Lingkungan", f'Python {meta.get("python", "?")}, numpy {meta.get("numpy", "?")}'],
+    ]
+    return _table(["Parameter", "Nilai"], rows, ["---", "---"])
+
+
+def build_report(results_dir: str, meta_file: Optional[str] = None) -> str:
     """Seluruh tabel sebagai satu dokumen Markdown."""
     def path(name: str) -> str:
         return os.path.join(results_dir, name)
@@ -111,6 +143,10 @@ def build_report(results_dir: str) -> str:
     ]
     parts += [""] + notes if notes else []
 
+    if meta_file:
+        with open(meta_file, "r", encoding="utf-8") as handle:
+            parts += ["", "**Parameter protokol turnamen**", "", meta_md(json.load(handle))]
+
     if os.path.exists(path("search_stats.csv")):
         stats = pd.read_csv(path("search_stats.csv"), dtype={"agent": str})
         stats = stats.set_index("agent").loc[[a for a in order if a in set(stats["agent"])]].reset_index()
@@ -122,10 +158,11 @@ def main(argv: Optional[List[str]] = None) -> int:
     parser = argparse.ArgumentParser(prog="python -m experiments.report_tables",
                                      description="Tabel Markdown untuk laporan dari file di results/.")
     parser.add_argument("--results-dir", default="results", help="folder keluaran experiments.analyze (default results)")
+    parser.add_argument("--meta", default=None, help="berkas <csv>.meta.json dari turnamen untuk tabel parameter")
     parser.add_argument("--out", default=None, help="berkas keluaran (default: cetak ke layar)")
     args = parser.parse_args(argv)
     try:
-        text = build_report(args.results_dir)
+        text = build_report(args.results_dir, args.meta)
     except FileNotFoundError as exc:
         raise SystemExit(str(exc))
     if args.out:

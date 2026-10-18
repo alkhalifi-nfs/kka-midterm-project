@@ -328,3 +328,43 @@ def test_duplicate_openings_trigger_a_warning_but_unique_ones_do_not(tmp_path, c
     assert "pembukaan yang berbeda" in capsys.readouterr().err
     run(tmp_path, ["random", "greedy"], openings=5, plies=8, name="uniq.csv")
     assert "pembukaan yang berbeda" not in capsys.readouterr().err
+
+
+# --- Berkas meta -----------------------------------------------------------------------------------------
+
+def read_meta(csv_path):
+    import json
+    return json.load(open(tournament.meta_path(csv_path), encoding="utf-8"))
+
+
+def test_meta_file_records_parameters_counts_and_provenance(tmp_path):
+    out, summary = run(tmp_path, ["random", "greedy"], openings=3, seeds=(42, 7), plies=6, depth=5,
+                       time_limit=0.25, name="m.csv")
+    assert tournament.meta_path(out).endswith("m.meta.json")
+    meta = read_meta(out)
+    assert meta["agents"] == ["random", "greedy"] and meta["pairs"] == 1
+    assert (meta["openings"], meta["seeds"], meta["opening_plies"]) == (3, [42, 7], 6)
+    assert (meta["depth"], meta["time_limit"]) == (5, 0.25)
+    assert meta["games_expected"] == 12 == summary["total"]
+    assert meta["requested_openings"] == 6 and 1 <= meta["distinct_openings"] <= 6
+    assert meta["max_game_moves"] == 300 and meta["max_sow_rounds"] == 200
+    assert meta["python"] and meta["numpy"]
+    assert len(meta["runs"]) == 1
+    run0 = meta["runs"][0]
+    assert (run0["played"], run0["skipped"], run0["forfeits"]) == (12, 0, 0)
+    assert run0["finished_at_utc"].endswith("+00:00")
+    # hash commit: 40 heksadesimal bila git tersedia di mesin ini; bila tidak, None (keduanya sah)
+    assert run0["git_commit"] is None or len(run0["git_commit"]) == 40
+
+
+def test_resume_appends_a_run_entry_instead_of_overwriting_history(tmp_path):
+    out, _ = run(tmp_path, ["random", "greedy"], openings=2, name="r.csv")
+    run(tmp_path, ["random", "greedy"], openings=4, name="r.csv", resume=True)
+    runs = read_meta(out)["runs"]
+    assert [(r["played"], r["skipped"]) for r in runs] == [(4, 0), (4, 4)]
+    assert read_meta(out)["games_expected"] == 8  # parameter statis mengikuti pemanggilan terakhir
+
+
+def test_forfeits_are_counted_in_meta(tmp_path):
+    out, _ = run(tmp_path, ["random", f"bad={FAKE}:IllegalAgent"], openings=2, name="f.csv")
+    assert read_meta(out)["runs"][0]["forfeits"] == 4

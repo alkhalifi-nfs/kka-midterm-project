@@ -38,15 +38,22 @@ runner), serta nodes, cutoffs, depth_sum, elapsed yang dijumlahkan dari
 import argparse
 import csv
 import hashlib
+import datetime
 import itertools
+import json
 import multiprocessing
 import os
+import platform
 import random
+import subprocess
 import sys
 import time
 from typing import Dict, Iterable, List, NamedTuple, Optional, Set, Tuple
 
+import numpy
+
 from experiments import registry
+from src.engine import board as engine_board
 from src.engine.api import (
     CongklakState, MAX_GAME_MOVES, apply_move, get_initial_state, get_legal_moves,
     get_scores, get_winner, is_terminal, state_key,
@@ -232,6 +239,46 @@ def play_game(task: GameTask) -> Dict[str, object]:
 
 # --- Penjadwalan -----------------------------------------------------------------
 
+# --- Berkas meta (asal-usul hasil) -----------------------------------------------------------
+
+def meta_path(csv_path: str) -> str:
+    return os.path.splitext(csv_path)[0] + ".meta.json"
+
+
+def _git_state() -> Tuple[Optional[str], Optional[bool]]:
+    """(hash commit, ada perubahan yang belum di-commit?) atau (None, None) bila git tidak tersedia."""
+    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    try:
+        commit = subprocess.run(["git", "rev-parse", "HEAD"], cwd=root, capture_output=True, text=True,
+                                timeout=15, check=True).stdout.strip()
+        dirty = bool(subprocess.run(["git", "status", "--porcelain", "--untracked-files=no"], cwd=root,
+                                    capture_output=True, text=True, timeout=15, check=True).stdout.strip())
+        return commit, dirty
+    except (OSError, subprocess.SubprocessError):
+        return None, None
+
+
+def write_meta(csv_path: str, static: Dict[str, object], run: Dict[str, object]) -> str:
+    """
+    Menulis <csv>.meta.json: parameter turnamen (tetap) dan daftar `runs` (satu entri per
+    pemanggilan, ditambahkan saat --resume) lengkap dengan hash commit tiap pemanggilan.
+    Sumber angka protokol turnamen di laporan.
+    """
+    path = meta_path(csv_path)
+    runs: List[Dict[str, object]] = []
+    if os.path.exists(path):
+        try:
+            with open(path, "r", encoding="utf-8") as handle:
+                runs = list(json.load(handle).get("runs", []))
+        except (OSError, ValueError):
+            runs = []
+    runs.append(run)
+    with open(path, "w", encoding="utf-8") as handle:
+        json.dump({**static, "runs": runs}, handle, indent=1, sort_keys=True, ensure_ascii=False)
+        handle.write("\n")
+    return path
+
+
 def build_tasks(specs: List[str], openings: int, seeds: List[int], opening_plies: int,
                 depth: Optional[int], time_limit: Optional[float]) -> List[GameTask]:
     """Semua game: seed x opening x pasangan unik x dua sisi (game berpasangan)."""
@@ -364,6 +411,19 @@ def run_tournament(specs: List[str], openings: int, seeds: List[int], opening_pl
             with context.Pool(workers) as pool:
                 consume(pool.imap_unordered(worker_fn, pending, chunksize=chunk))
 
+    commit, dirty = _git_state()
+    write_meta(out_path, {
+        "agents": names, "agent_specs": list(specs),
+        "openings": openings, "seeds": list(seeds), "opening_plies": opening_plies,
+        "depth": depth, "time_limit": time_limit, "pairs": len(specs) * (len(specs) - 1) // 2,
+        "games_expected": total, "distinct_openings": distinct, "requested_openings": requested,
+        "max_game_moves": MAX_GAME_MOVES, "max_sow_rounds": engine_board.MAX_SOW_ROUNDS,
+        "python": platform.python_version(), "numpy": numpy.__version__, "platform": platform.platform(),
+    }, {
+        "finished_at_utc": datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds"),
+        "workers": workers, "played": written, "skipped": skipped, "forfeits": forfeits,
+        "git_commit": commit, "git_dirty": dirty,
+    })
     return {"total": total, "skipped": skipped, "played": written, "forfeits": forfeits}
 
 

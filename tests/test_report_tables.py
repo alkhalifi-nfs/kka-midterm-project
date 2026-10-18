@@ -113,3 +113,35 @@ def test_cli_writes_the_markdown_file(tmp_path, capsys):
     assert open(target, encoding="utf-8").read() == build_report(out)
     assert report_tables.main(["--results-dir", out]) == 0
     assert "Rating Elo" in capsys.readouterr().out
+
+
+def test_protocol_table_comes_from_the_meta_file(tmp_path):
+    from experiments import tournament
+    csv_path = str(tmp_path / "t.csv")
+    tournament.run_tournament(["random", "greedy"], 3, [42, 7], 6, 5, None, 1, csv_path, progress=False)
+    out = str(tmp_path / "res")
+    analyze.analyze([csv_path], out, resamples=30)
+    text = build_report(out, tournament.meta_path(csv_path))
+    assert "Parameter protokol turnamen" in text
+    assert "| Agen | random, greedy |" in text
+    assert "| Seed | 42, 7 |" in text
+    assert "| Langkah acak pembukaan | 6 |" in text
+    assert "| Game per pasangan agen (pembukaan x 2 sisi x seed) | 12 |" in text
+    assert "| Total game yang direncanakan | 12 |" in text
+    assert "| Batas waktu per langkah (detik) | tanpa batas |" in text
+    assert "| Batas langkah per game / putaran tabur per giliran | 300 / 200 |" in text
+    assert "| Jumlah pemanggilan (termasuk --resume) | 1 |" in text
+    assert "Parameter protokol" not in build_report(out)  # tanpa --meta, tabel tidak ada
+
+
+def test_protocol_table_sums_resumed_runs_and_cli_accepts_meta(tmp_path, capsys):
+    from experiments import tournament
+    csv_path = str(tmp_path / "t.csv")
+    tournament.run_tournament(["random", "greedy"], 2, [1], 6, 4, None, 1, csv_path, progress=False)
+    tournament.run_tournament(["random", "greedy"], 4, [1], 6, 4, None, 1, csv_path, resume=True, progress=False)
+    out = str(tmp_path / "res")
+    analyze.analyze([csv_path], out, resamples=30)
+    assert report_tables.main(["--results-dir", out, "--meta", tournament.meta_path(csv_path)]) == 0
+    text = capsys.readouterr().out
+    assert "| Jumlah pemanggilan (termasuk --resume) | 2 |" in text
+    assert "| Game dimainkan (jumlah semua pemanggilan) | 8 |" in text
