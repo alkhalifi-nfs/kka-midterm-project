@@ -310,3 +310,21 @@ def test_play_game_returns_exactly_the_csv_columns():
     assert set(row) == set(COLUMNS)
     assert row["agent_p0"] == "random" and row["agent_p1"] == "greedy"
     assert row["winner"] in {"random", "greedy", "draw"}
+
+
+# --- Peringatan pembukaan berulang -----------------------------------------------------------------
+
+def test_count_distinct_openings_respects_the_reachable_position_bound():
+    distinct, requested = tournament.count_distinct_openings([42, 123, 2026], 100, 2)
+    assert requested == 300
+    assert 1 < distinct <= 36  # batas keras: hanya 36 posisi berbeda yang bisa dicapai dalam 2 langkah
+    assert tournament.count_distinct_openings([42], 50, 0) == (1, 50)  # tanpa langkah acak: satu posisi awal
+    distinct8, requested8 = tournament.count_distinct_openings([42, 123, 2026], 100, 8)
+    assert distinct8 == requested8 == 300
+
+
+def test_duplicate_openings_trigger_a_warning_but_unique_ones_do_not(tmp_path, capsys):
+    run(tmp_path, ["random", "greedy"], openings=40, plies=2, name="dup.csv")
+    assert "pembukaan yang berbeda" in capsys.readouterr().err
+    run(tmp_path, ["random", "greedy"], openings=5, plies=8, name="uniq.csv")
+    assert "pembukaan yang berbeda" not in capsys.readouterr().err

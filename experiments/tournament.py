@@ -22,6 +22,9 @@ Desain (alasan tiap keputusan):
   * Agen yang mengembalikan langkah ilegal atau melempar exception dicatat
     sebagai KALAH (forfeit) disertai peringatan; run tidak berhenti.
   * Runner tidak menegakkan time_limit: nilainya hanya diteruskan ke agen.
+  * Jumlah posisi pembukaan berbeda dibatasi oleh opening-plies (setelah 4 langkah acak
+    hanya ada 1.406 posisi yang mungkin, setelah 6 langkah 48.281). Runner memperingatkan bila
+    ada pembukaan yang berulang pada kombinasi seed x openings yang diminta.
 
 Kolom CSV: seed, opening_id, agent_p0, agent_p1, winner (nama atau "draw"),
 score_p0, score_p1, moves (semua langkah termasuk pembukaan), hit_move_cap
@@ -46,7 +49,7 @@ from typing import Dict, Iterable, List, NamedTuple, Optional, Set, Tuple
 from experiments import registry
 from src.engine.api import (
     CongklakState, MAX_GAME_MOVES, apply_move, get_initial_state, get_legal_moves,
-    get_scores, get_winner, is_terminal,
+    get_scores, get_winner, is_terminal, state_key,
 )
 
 COLUMNS = [
@@ -90,6 +93,13 @@ def make_opening(seed: int, opening_id: int, plies: int) -> CongklakState:
             break
         state = apply_move(state, rng.choice(get_legal_moves(state)))
     return state
+
+
+def count_distinct_openings(seeds: List[int], openings: int, plies: int) -> Tuple[int, int]:
+    """(jumlah posisi pembukaan berbeda, jumlah pembukaan yang diminta) untuk seed x opening_id."""
+    keys = {state_key(make_opening(seed, opening_id, plies))
+            for seed in seeds for opening_id in range(openings)}
+    return len(keys), len(seeds) * openings
 
 
 def agent_seed(seed: int, opening_id: int, side: int, name: str) -> int:
@@ -297,6 +307,12 @@ def run_tournament(specs: List[str], openings: int, seeds: List[int], opening_pl
 
     tasks = build_tasks(specs, openings, seeds, opening_plies, depth, time_limit)
     total = len(tasks)
+
+    distinct, requested = count_distinct_openings(seeds, openings, opening_plies)
+    if distinct < requested:
+        registry.warn(f"hanya {distinct} dari {requested} pembukaan yang berbeda dengan opening-plies={opening_plies}; "
+                      f"agen deterministik memainkan game identik pada pembukaan yang berulang, jadi game itu bukan "
+                      f"sampel baru. Naikkan --opening-plies atau kurangi --openings.")
 
     out_dir = os.path.dirname(out_path)
     if out_dir:
