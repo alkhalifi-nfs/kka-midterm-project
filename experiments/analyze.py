@@ -388,7 +388,11 @@ def analyze(paths: Sequence[str], out_dir: str = "results", resamples: int = 100
     _write_csv(table, os.path.join(out_dir, "winrate_matrix.csv"), 6)
 
     elo = elo_table(games, resamples, seed, prior, unit)
-    _write_csv(elo, os.path.join(out_dir, "elo.csv"), 2)
+    # Rating dan batas interval dibulatkan ke 0,01 poin Elo; kolom lain (mis. score_rate) tetap presisi penuh.
+    rounded = elo.copy()
+    rounded[["elo", "ci_low", "ci_high"]] = rounded[["elo", "ci_low", "ci_high"]].round(2)
+    rounded["score_rate"] = rounded["score_rate"].round(6)
+    rounded.to_csv(os.path.join(out_dir, "elo.csv"), index=False)
 
     stats = search_stats(games)
     _write_csv(stats, os.path.join(out_dir, "search_stats.csv"), 6)

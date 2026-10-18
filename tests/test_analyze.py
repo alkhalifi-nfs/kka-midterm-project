@@ -347,3 +347,18 @@ def test_invalid_bootstrap_unit_is_rejected_and_cli_accepts_the_option(tmp_path)
     assert analyze.main([path, "--out-dir", str(tmp_path / "o"), "--bootstrap", "30",
                          "--bootstrap-unit", "opening"]) == 0
     assert set(pd.read_csv(tmp_path / "o" / "elo.csv")["bootstrap_unit"]) == {"opening"}
+
+
+def test_elo_csv_keeps_precision_of_score_rate_and_rounds_ratings_to_two_decimals(tmp_path):
+    games = synthetic_games(a_wins=5, b_wins=1)  # skor A = 5/6, bukan 0,83
+    path = str(tmp_path / "g.csv")
+    games.to_csv(path, index=False)
+    out = str(tmp_path / "o")
+    result = analyze.analyze([path], out, resamples=30)
+    written = pd.read_csv(os.path.join(out, "elo.csv")).set_index("agent")
+    assert written.loc["A", "score_rate"] == pytest.approx(5 / 6, abs=1e-6)
+    assert written.loc["A", "score_rate"] != pytest.approx(0.83, abs=1e-4)
+    in_memory = result["elo"].set_index("agent")
+    for column in ("elo", "ci_low", "ci_high"):
+        assert written.loc["A", column] == pytest.approx(in_memory.loc["A", column], abs=0.005)
+        assert round(written.loc["A", column], 2) == written.loc["A", column]
