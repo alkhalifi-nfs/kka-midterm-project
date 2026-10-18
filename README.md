@@ -36,7 +36,16 @@ pip install -r requirements.txt
 
 # 2. Jalankan seluruh unit test (dijalankan dari root repositori)
 python -m pytest -q
+
+# 3. Turnamen antar agen, analisis Elo/win rate, dan tabel untuk laporan
+python -m experiments.tournament --agents random,greedy --openings 20 --seeds 42 --depth 1 \
+    --out results/smoke_tournament.csv
+python -m experiments.analyze results/smoke_tournament.csv --out-dir results/smoke_analysis
+python -m experiments.report_tables --results-dir results/smoke_analysis \
+    --meta results/smoke_tournament.meta.json
 ```
+
+Langkah lengkap turnamen akhir (prasyarat, parameter, dan daftar periksa) ada di [docs/turnamen_final.md](docs/turnamen_final.md). Berkas `results/smoke_*` hanya untuk uji asap dan tidak di-commit.
 
 ---
 
