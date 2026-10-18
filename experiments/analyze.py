@@ -21,9 +21,14 @@ Catatan metode:
     graf "i pernah menang atas j" terhubung kuat. Bila tidak (mis. satu agen kalah
     di semua game), dipakai penghalusan: tiap pasangan yang pernah bertemu diberi
     `prior` poin (default 0,5) untuk kedua arah, dan kolom `regularized` = True.
-  * Bootstrap meresampel GAME secara independen (sesuai spesifikasi). Game
-    berpasangan (pembukaan yang sama, sisi ditukar) tidak independen penuh,
-    sehingga interval ini cenderung sedikit terlalu sempit.
+  * Bootstrap default meresampel GAME satu per satu (sesuai spesifikasi). Game yang
+    berbagi pembukaan (pasangan sisi-tukar, dan antar pasangan agen) tidak independen
+    penuh. Arah pengaruhnya bergantung pada agen: pada satu pengukuran random vs greedy
+    (1.800 game) skor sebuah agen pada dua game satu pembukaan berkorelasi negatif
+    (-0,12), sehingga interval per game justru sedikit lebih lebar (sekitar 2%) daripada
+    interval per pembukaan. Itu belum tentu berlaku untuk agen lain. Periksa pada data
+    sebenarnya dengan --bootstrap-unit opening, yang meresampel seluruh game dari satu
+    (seed, opening_id) sekaligus.
 """
 
 import argparse
@@ -189,32 +194,52 @@ def bradley_terry(points: np.ndarray, prior: float = 0.5, max_iter: int = 200_00
 
 def bootstrap_elo(ai: np.ndarray, bi: np.ndarray, points_p0: np.ndarray, k: int,
                   resamples: int = 1000, seed: int = 0, prior: float = 0.5,
-                  init: Optional[np.ndarray] = None) -> Tuple[np.ndarray, np.ndarray]:
-    """Interval persentil 95% bootstrap (resample per game dengan pengembalian)."""
+                  init: Optional[np.ndarray] = None,
+                  blocks: Optional[np.ndarray] = None) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Interval persentil 95% bootstrap. Tanpa `blocks`: resample per game dengan
+    pengembalian. Dengan `blocks` (id blok per game, mis. pembukaan): resample BLOK
+    dengan pengembalian, tiap blok membawa seluruh game di dalamnya.
+    """
     rng = np.random.default_rng(seed)
     n_games = len(ai)
     samples = np.empty((resamples, k))
+
+    if blocks is not None:
+        _, blocks = np.unique(blocks, return_inverse=True)
+        n_blocks = int(blocks.max()) + 1
+        per_block = np.zeros((n_blocks, k, k))
+        np.add.at(per_block, (blocks, ai, bi), points_p0)
+        np.add.at(per_block, (blocks, bi, ai), 1.0 - points_p0)
+
     for r in range(resamples):
-        draw = rng.integers(0, n_games, n_games)
+        if blocks is None:
+            matrix = _points_matrix(ai, bi, points_p0, k, rng.integers(0, n_games, n_games))
+        else:
+            counts = np.bincount(rng.integers(0, n_blocks, n_blocks), minlength=n_blocks)
+            matrix = np.tensordot(counts, per_block, axes=1)
         # toleransi lebih longgar (1e-9 pada log-rating, setara ~2e-7 poin Elo) karena warm start
-        samples[r], _, _ = bradley_terry(_points_matrix(ai, bi, points_p0, k, draw), prior,
-                                         tol=1e-9, init=init)
+        samples[r], _, _ = bradley_terry(matrix, prior, tol=1e-9, init=init)
     low, high = np.percentile(samples, [2.5, 97.5], axis=0)
     return low, high
 
 
 def elo_table(games: pd.DataFrame, resamples: int = 1000, seed: int = 0,
-              prior: float = 0.5) -> pd.DataFrame:
+              prior: float = 0.5, unit: str = "game") -> pd.DataFrame:
+    """Tabel Elo. unit="game": bootstrap per game (default); unit="opening": per (seed, opening_id)."""
+    if unit not in ("game", "opening"):
+        raise ValueError(f"unit harus 'game' atau 'opening', bukan {unit!r}")
     agents, ai, bi, points_p0 = _agent_index(games)
     k = len(agents)
     points = _points_matrix(ai, bi, points_p0, k)
     elo, regularized, pi = bradley_terry(points, prior)
-    low, high = bootstrap_elo(ai, bi, points_p0, k, resamples, seed, prior, init=pi)
+    blocks = games.groupby(["seed", "opening_id"]).ngroup().to_numpy() if unit == "opening" else None
+    low, high = bootstrap_elo(ai, bi, points_p0, k, resamples, seed, prior, init=pi, blocks=blocks)
     n_games = (points + points.T).sum(axis=1)
     return pd.DataFrame({
         "agent": agents, "elo": elo, "ci_low": low, "ci_high": high,
         "n_games": n_games.astype(int), "score_rate": points.sum(axis=1) / n_games,
-        "regularized": regularized, "bootstrap_resamples": resamples,
+        "regularized": regularized, "bootstrap_resamples": resamples, "bootstrap_unit": unit,
     }).sort_values("elo", ascending=False, kind="stable").reset_index(drop=True)
 
 
@@ -354,7 +379,7 @@ def _write_csv(frame: pd.DataFrame, path: str, float_digits: int = 6) -> None:
 
 
 def analyze(paths: Sequence[str], out_dir: str = "results", resamples: int = 1000,
-            seed: int = 0, prior: float = 0.5) -> Dict[str, object]:
+            seed: int = 0, prior: float = 0.5, unit: str = "game") -> Dict[str, object]:
     games = load_games(paths)
     figures_dir = os.path.join(out_dir, "figures")
     os.makedirs(figures_dir, exist_ok=True)
@@ -362,7 +387,7 @@ def analyze(paths: Sequence[str], out_dir: str = "results", resamples: int = 100
     table = winrate_table(games)
     _write_csv(table, os.path.join(out_dir, "winrate_matrix.csv"), 6)
 
-    elo = elo_table(games, resamples, seed, prior)
+    elo = elo_table(games, resamples, seed, prior, unit)
     _write_csv(elo, os.path.join(out_dir, "elo.csv"), 2)
 
     stats = search_stats(games)
@@ -390,9 +415,12 @@ def main(argv: Optional[List[str]] = None) -> int:
     parser.add_argument("--seed", type=int, default=0, help="seed bootstrap (default 0)")
     parser.add_argument("--prior", type=float, default=0.5,
                         help="poin penghalusan per arah bila MLE tidak ada (default 0,5)")
+    parser.add_argument("--bootstrap-unit", choices=["game", "opening"], default="game",
+                        help="satuan resample bootstrap: 'game' (default, sesuai spesifikasi) atau "
+                             "'opening' (seluruh game dari satu seed+opening_id sekaligus)")
     args = parser.parse_args(argv)
 
-    result = analyze(args.inputs, args.out_dir, args.bootstrap, args.seed, args.prior)
+    result = analyze(args.inputs, args.out_dir, args.bootstrap, args.seed, args.prior, args.bootstrap_unit)
     games, table, elo = result["games"], result["winrate"], result["elo"]
     print(f"{len(games)} game dari {len(args.inputs)} berkas -> {args.out_dir}")
     print("\nWin rate (baris melawan kolom, seri = 0,5):")

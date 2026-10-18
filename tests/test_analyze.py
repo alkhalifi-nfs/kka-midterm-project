@@ -283,3 +283,67 @@ def test_cli_main_prints_tables(tmp_path, capsys):
     assert analyze.main([path, "--out-dir", str(tmp_path / "o"), "--bootstrap", "30"]) == 0
     out = capsys.readouterr().out
     assert "Win rate" in out and "Elo" in out
+
+
+# --- Bootstrap per pembukaan (cluster) ---------------------------------------------------------
+
+def openings_games(outcomes):
+    """
+    Dua game per pembukaan (A pegang P0 di game pertama, B di game kedua).
+    `outcomes[i]` = (pemenang game 1, pemenang game 2), masing-masing "A" atau "B".
+    """
+    rows = []
+    for i, (first, second) in enumerate(outcomes):
+        rows.append({"seed": 7, "opening_id": i, "agent_p0": "A", "agent_p1": "B", "winner": first})
+        rows.append({"seed": 7, "opening_id": i, "agent_p0": "B", "agent_p1": "A", "winner": second})
+    return pd.DataFrame(rows)
+
+
+def test_opening_bootstrap_has_zero_width_when_each_opening_gives_exactly_one_point_each():
+    """Pemegang giliran pertama selalu menang: skor tiap agen per pembukaan selalu 1 dari 2."""
+    games = openings_games([("A", "B")] * 40)  # game 1: P0=A menang; game 2: P0=B menang
+    per_opening = elo_table(games, resamples=200, unit="opening")
+    per_game = elo_table(games, resamples=200, unit="game")
+    assert per_opening["elo"].tolist() == pytest.approx([1500.0, 1500.0])
+    assert (per_opening["ci_high"] - per_opening["ci_low"]).tolist() == pytest.approx([0.0, 0.0], abs=1e-6)
+    assert (per_game["ci_high"] - per_game["ci_low"]).min() > 10  # per game mengabaikan struktur itu
+
+
+def test_opening_bootstrap_is_wider_when_one_agent_wins_both_games_of_an_opening():
+    """Korelasi positif dalam pembukaan: lebar interval per pembukaan ~ sqrt(2) kali per game."""
+    games = openings_games([("A", "A")] * 25 + [("B", "B")] * 25)
+    width = lambda unit: elo_table(games, resamples=1000, seed=3, unit=unit).set_index("agent").pipe(
+        lambda t: t.loc["A", "ci_high"] - t.loc["A", "ci_low"])
+    ratio = width("opening") / width("game")
+    assert ratio == pytest.approx(math.sqrt(2), rel=0.15)
+
+
+def test_opening_blocks_of_size_one_reproduce_the_per_game_bootstrap():
+    games = synthetic_games(30, 10)  # tiap game punya opening_id sendiri, seed sama
+    by_game = elo_table(games, resamples=100, seed=2, unit="game")
+    by_block = elo_table(games, resamples=100, seed=2, unit="opening")
+    assert by_block["ci_low"].tolist() == pytest.approx(by_game["ci_low"].tolist())
+    assert by_block["ci_high"].tolist() == pytest.approx(by_game["ci_high"].tolist())
+    assert set(by_game["bootstrap_unit"]) == {"game"} and set(by_block["bootstrap_unit"]) == {"opening"}
+
+
+def test_opening_blocks_treat_same_opening_id_in_different_seeds_as_different_blocks():
+    """
+    Seed 7: A menang di kedua game tiap pembukaan; seed 8 (opening_id sama): B menang di kedua game.
+    Dikelompokkan per (seed, opening_id) -> 20 blok bernilai 2 atau 0 poin, sehingga interval > 0.
+    Bila keliru dikelompokkan hanya per opening_id, tiap blok berisi 2 poin tetap dan interval jadi 0.
+    """
+    won_by_a = openings_games([("A", "A")] * 10)
+    won_by_b = openings_games([("B", "B")] * 10).assign(seed=8)
+    table = elo_table(pd.concat([won_by_a, won_by_b], ignore_index=True), resamples=300, unit="opening")
+    assert (table["ci_high"] - table["ci_low"]).min() > 50
+
+
+def test_invalid_bootstrap_unit_is_rejected_and_cli_accepts_the_option(tmp_path):
+    with pytest.raises(ValueError, match="unit"):
+        elo_table(synthetic_games(5, 5), resamples=10, unit="seed")
+    path = str(tmp_path / "g.csv")
+    openings_games([("A", "A")] * 10 + [("B", "B")] * 10).to_csv(path, index=False)
+    assert analyze.main([path, "--out-dir", str(tmp_path / "o"), "--bootstrap", "30",
+                         "--bootstrap-unit", "opening"]) == 0
+    assert set(pd.read_csv(tmp_path / "o" / "elo.csv")["bootstrap_unit"]) == {"opening"}
