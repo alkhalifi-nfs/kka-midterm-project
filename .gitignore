@@ -1,0 +1,8 @@
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+
+# Keluaran uji asap (smoke) turnamen: tidak di-commit
+results/smoke_*
