@@ -19,6 +19,24 @@ Proyek Ujian Tengah Semester (UTS) mata kuliah **Konsep Kecerdasan Artifisial (K
 - `experiments/` : Skrip pelatihan GA, pengujian turnamen, dan verifikasi model.
 - `results/` : Data log pertandingan, checkpoint model (.json/.npy), tabel CSV, dan grafik.
 - `report/` : Berkas penyusunan naskah laporan akhir dan bahan presentasi PPT.
+- `docs/` : Dokumentasi, termasuk aturan permainan final (`docs/rules.md`).
+- `tests/` : Unit test (pytest), termasuk oracle independen `tests/reference_engine.py`.
+
+---
+
+## ▶️ Cara Menjalankan
+
+Membutuhkan Python 3.10 atau lebih baru. Dependensi: numpy, pandas, matplotlib, pytest.
+
+```bash
+# 1. Buat virtual environment dan pasang dependensi
+python -m venv .venv
+source .venv/bin/activate        # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+
+# 2. Jalankan seluruh unit test (dijalankan dari root repositori)
+python -m pytest -q
+```
 
 ---
 
