@@ -1,0 +1,29 @@
+{
+ "positions": "results/positions_seed42_n500.json",
+ "n_positions": 500,
+ "depths": [
+  1,
+  2,
+  3,
+  4,
+  5,
+  6
+ ],
+ "configs": [
+  "minimax",
+  "ab_polos",
+  "ab_ordering",
+  "ab_tt",
+  "ab_ordering_tt",
+  "ab_lengkap"
+ ],
+ "heuristic": "h2",
+ "workers": 1,
+ "seconds": 195.1,
+ "date": "2026-10-20T16:43:31",
+ "commit": "1c5e391c7daba6e277e63f88ec0c454a3171ceb5",
+ "dirty": false,
+ "python": "3.12.10",
+ "numpy": "2.5.4",
+ "platform": "Windows-11-10.0.26200-SP0"
+}

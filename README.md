@@ -43,6 +43,10 @@ python -m experiments.tournament --agents random,greedy --openings 20 --seeds 42
 python -m experiments.analyze results/smoke_tournament.csv --out-dir results/smoke_analysis
 python -m experiments.report_tables --results-dir results/smoke_analysis \
     --meta results/smoke_tournament.meta.json
+
+# 4. Pengukuran pencarian untuk Bab 3.2/3.3 (kesamaan dengan Minimax, node, EBF, TT)
+#    Keluaran: results/search_bench*.csv, search_bench_tabel.md, search_bench_nodes.png
+python -m experiments.search_bench --depths 1-6 --workers 1 --out results/search_bench.csv
 ```
 
 Langkah lengkap turnamen akhir (prasyarat, parameter, dan daftar periksa) ada di [docs/turnamen_final.md](docs/turnamen_final.md). Berkas `results/smoke_*` hanya untuk uji asap dan tidak di-commit.
