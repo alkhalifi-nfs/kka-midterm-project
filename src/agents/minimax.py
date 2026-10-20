@@ -23,6 +23,12 @@ from src.agents.evaluation import HEURISTICS, evaluate
 from src.engine.api import CongklakState, apply_move, get_legal_moves, is_terminal
 
 DEFAULT_DEPTH = 4
+MAX_ID_DEPTH = 64          # batas kedalaman bila hanya dibatasi waktu
+TIME_CHECK_EVERY = 256     # periksa jam setiap sekian simpul
+
+
+class _Timeout(Exception):
+    pass
 
 
 @dataclass
@@ -36,8 +42,14 @@ class SearchStats:
 
 class MinimaxAgent:
     """
-    Minimax berkedalaman tetap. `heuristic` adalah "h1" atau "h2".
-    `time_limit` dari runner diabaikan: Model 1 hanya dibatasi kedalaman.
+    Minimax berkedalaman terbatas. `heuristic` adalah "h1" atau "h2".
+
+    Tanpa time_limit: satu pencarian pada kedalaman `depth` (Bab 2.2).
+    Dengan time_limit (untuk RQ3, perbandingan pada batas waktu yang sama):
+    kedalaman 1, 2, ... diulang hingga waktu habis, tanpa ordering maupun TT;
+    iterasi yang terpotong dibuang dan kedalaman 1 selalu diselesaikan;
+    berhenti lebih awal bila pohon sudah habis sampai akhir permainan.
+    depth <= 0 bersama time_limit berarti hanya dibatasi waktu.
     """
 
     def __init__(self, depth: int = DEFAULT_DEPTH, heuristic: str = "h2"):
@@ -51,17 +63,42 @@ class MinimaxAgent:
         self.metrics = SearchStats()
         self._me = 0
         self._nodes = 0
+        self._deadline: Optional[float] = None
+        self._hit_horizon = False
 
     def reset(self, seed=None) -> None:
         """Agen deterministik; seed diabaikan."""
         self.metrics = SearchStats()
 
     def choose_move(self, state: CongklakState, time_limit=None, depth=None) -> int:
-        """Langkah terbaik pada kedalaman `depth` (default: self.depth)."""
-        depth = self.depth if depth is None else int(depth)
+        """Langkah terbaik pada kedalaman `depth` (default: self.depth), lihat docstring kelas."""
         started = time.perf_counter()
-        _, move = self.search(state, depth)
-        self.metrics.elapsed = time.perf_counter() - started
+        max_depth = self.depth if depth is None else int(depth)
+        if not time_limit:
+            _, move = self.search(state, max_depth)
+            self.metrics.elapsed = time.perf_counter() - started
+            return move
+
+        if max_depth <= 0:
+            max_depth = MAX_ID_DEPTH
+        move, completed, nodes = None, 0, 0
+        for d in range(1, max_depth + 1):
+            self._deadline = started + time_limit if d > 1 else None
+            try:
+                _, move = self.search(state, d)
+            except _Timeout:
+                nodes += self._nodes
+                break
+            finally:
+                self._deadline = None
+            completed = d
+            nodes += self.metrics.nodes
+            if not self._hit_horizon:
+                break  # seluruh pohon sampai akhir permainan sudah ditelusuri
+            if time.perf_counter() >= started + time_limit:
+                break
+        self.metrics = SearchStats(nodes=nodes, cutoffs=0, depth_reached=completed,
+                                   elapsed=time.perf_counter() - started)
         return move
 
     def search(self, state: CongklakState, depth: int) -> Tuple[float, int]:
@@ -77,6 +114,7 @@ class MinimaxAgent:
 
         self._me = state.current_player
         self._nodes = 1  # akar
+        self._hit_horizon = False
         best_v, best_a = -math.inf, moves[0]
         for a in moves:
             v = self._value(apply_move(state, a), depth - 1)
@@ -89,7 +127,13 @@ class MinimaxAgent:
     def _value(self, state: CongklakState, depth: int) -> float:
         """NILAI(s, d) pada Pseudocode NILAI."""
         self._nodes += 1
-        if depth == 0 or is_terminal(state):
+        if (self._deadline is not None and self._nodes % TIME_CHECK_EVERY == 0
+                and time.perf_counter() >= self._deadline):
+            raise _Timeout
+        if is_terminal(state):
+            return evaluate(state, self._me, self.heuristic)
+        if depth == 0:
+            self._hit_horizon = True
             return evaluate(state, self._me, self.heuristic)
 
         children = (self._value(apply_move(state, a), depth - 1) for a in get_legal_moves(state))
