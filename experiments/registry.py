@@ -30,7 +30,8 @@ AGENT_SPECS: Dict[str, List[str]] = {
     "greedy": ["experiments.baseline_agents:GreedyAgent"],
     "minimax": ["src.agents.minimax:MinimaxAgent"],          # Model 1 dengan H2
     "minimax_h1": ["src.agents.minimax:MinimaxH1Agent"],     # Model 1 dengan H1
-    "alphabeta": ["src.agents.alphabeta:AlphaBetaAgent"],
+    "alphabeta": ["src.agents.alphabeta:AlphaBetaAgent"],    # Model 2 dengan H2
+    "alphabeta_h1": ["src.agents.alphabeta:AlphaBetaH1Agent"],  # Model 2 dengan H1
     "ga": ["src.agents.ga:GAAgent"],
 }
 

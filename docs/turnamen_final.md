@@ -1,6 +1,6 @@
 # Runbook turnamen akhir (T37)
 
-**Status per 20 Oktober 2026: belum bisa dijalankan.** Engine, infrastruktur turnamen, dan Model 1 Minimax (`minimax` = H2, `minimax_h1` = H1) sudah ada di `main`. Model 2 Alpha-Beta lengkap (`src/agents/alphabeta.py`) dan Model 3 GA (`src/agents/ga.py`) belum ada. Menjalankan turnamen dengan agen sementara akan menghasilkan angka yang tidak boleh masuk laporan. Dokumen ini menyiapkan langkahnya.
+**Status per 20 Oktober 2026: belum bisa dijalankan.** Engine, infrastruktur turnamen, Model 1 Minimax (`minimax` = H2, `minimax_h1` = H1), dan Model 2 Alpha-Beta (`alphabeta` = H2, `alphabeta_h1` = H1) sudah ada di `main`. Model 3 GA (`src/agents/ga.py`) belum ada. Menjalankan turnamen dengan agen sementara akan menghasilkan angka yang tidak boleh masuk laporan. Dokumen ini menyiapkan langkahnya.
 
 ## 0. Prasyarat (centang semua sebelum mulai)
 
@@ -8,7 +8,7 @@
 - [ ] Agen resmi sudah di-merge dan memenuhi kontrak agen: `name`, `choose_move(state, time_limit=None, depth=None) -> int`; opsional `reset(seed)` dan `metrics` (lihat `experiments/__init__.py`).
 - [ ] Nama agen terdaftar di `experiments/registry.py` (`AGENT_SPECS`), atau siapkan spesifikasi `alias=modul:Kelas` untuk tiap agen.
 - [ ] `git status` bersih (berkas meta mencatat bila ada perubahan yang belum di-commit) dan `python -m pytest -q` hijau.
-- [ ] Uji kebenaran Minimax = Alpha-Beta pada posisi di `results/positions_seed42_n500.json` sudah lulus (tugas Ravy dan Pisnur). Turnamen tidak menguji hal ini.
+- [ ] Uji kebenaran Minimax = Alpha-Beta pada posisi di `results/positions_seed42_n500.json` sudah lulus (tugas Ravy dan Pisnur). Turnamen tidak menguji hal ini. `tests/test_alphabeta.py` baru memeriksa 24 posisi pertama (kedalaman 1-4, TT dimatikan); seluruh 500 posisi dan angka untuk Bab 3.2 belum dijalankan.
 
 ## 1. Uji asap dengan agen final (sebelum run besar)
 
@@ -30,7 +30,7 @@ Periksa: tidak ada peringatan "dilewati", `forfeit` = 0 pada semua baris, dan se
 | `--seeds` | `42,123,2026` | |
 | `--opening-plies` | **6 atau lebih** (bawaan CLI: 4) | lihat di bawah |
 | `--depth` | `[tentukan]` | harus sama untuk semua agen pencarian bila perbandingannya ingin adil |
-| `--time-limit` | 0 | batas waktu tidak ditegakkan runner dan membuat hasil bergantung kecepatan mesin |
+| `--time-limit` | 0 | runner tidak memotong agen, tetapi `minimax` dan `alphabeta` menghormatinya sendiri lewat iterative deepening. Untuk RQ3 (batas waktu sama) jalankan run terpisah dengan `--depth 0 --time-limit <detik>` (depth 0 = hanya dibatasi waktu); hasilnya bergantung kecepatan mesin, jadi catat mesinnya dan pakai `--workers` kecil |
 | `--workers` | `[tentukan]` | lebih banyak proses mempercepat run tetapi memengaruhi pengukuran waktu |
 
 Total game = pasangan × `--openings` × 2 × jumlah seed. Dengan usulan di atas: 10 × 100 × 2 × 3 = 6.000 game.
