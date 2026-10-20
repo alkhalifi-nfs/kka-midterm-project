@@ -1,0 +1,49 @@
+{
+ "weights": [
+  1.0,
+  -0.043492521158267725,
+  0.09149242586358161,
+  -0.25447190702736533,
+  0.36699380858345265,
+  0.9384915065257938
+ ],
+ "features": [
+  "f1 selisih lumbung",
+  "f2 selisih biji di sisi",
+  "f3 selisih peluang giliran tambahan",
+  "f4 peluang tembak agen",
+  "f5 ancaman tembak lawan",
+  "f6 selisih lubang aktif"
+ ],
+ "chosen": "terbaik generasi 23",
+ "validation_fitness": 57.13,
+ "h2_validation_fitness": 52.43,
+ "params": {
+  "population": 20,
+  "generations": 30,
+  "elite": 2,
+  "tournament_k": 3,
+  "crossover_rate": 0.9,
+  "blx_alpha": 0.5,
+  "mutation_rate": 0.2,
+  "mutation_sigma": 0.15,
+  "depth": 4,
+  "openings": 8,
+  "opening_plies": 6,
+  "opponents": [
+   "h2",
+   "h1"
+  ],
+  "validation_openings": 50,
+  "validation_last": 10,
+  "seed": 2026
+ },
+ "seconds": 195.5,
+ "workers": 19,
+ "date": "2026-10-20T16:53:29",
+ "commit": "bc230c6e2cbbe5a9c279ecbe30313b8868a519df",
+ "dirty": false,
+ "python": "3.12.10",
+ "numpy": "2.5.4",
+ "platform": "Windows-11-10.0.26200-SP0"
+}

@@ -47,6 +47,9 @@ python -m experiments.report_tables --results-dir results/smoke_analysis \
 # 4. Pengukuran pencarian untuk Bab 3.2/3.3 (kesamaan dengan Minimax, node, EBF, TT)
 #    Keluaran: results/search_bench*.csv, search_bench_tabel.md, search_bench_nodes.png
 python -m experiments.search_bench --depths 1-6 --workers 1 --out results/search_bench.csv
+
+# 5. Training Algoritma Genetika untuk Model 3 (Bab 2.4/3.4); bobot -> results/ga_weights.json
+python -m experiments.ga_train --out-dir results
 ```
 
 Langkah lengkap turnamen akhir (prasyarat, parameter, dan daftar periksa) ada di [docs/turnamen_final.md](docs/turnamen_final.md). Berkas `results/smoke_*` hanya untuk uji asap dan tidak di-commit.

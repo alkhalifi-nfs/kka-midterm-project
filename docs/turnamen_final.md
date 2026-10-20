@@ -1,6 +1,6 @@
 # Runbook turnamen akhir (T37)
 
-**Status per 20 Oktober 2026: belum bisa dijalankan.** Engine, infrastruktur turnamen, Model 1 Minimax (`minimax` = H2, `minimax_h1` = H1), dan Model 2 Alpha-Beta (`alphabeta` = H2, `alphabeta_h1` = H1) sudah ada di `main`. Model 3 GA (`src/agents/ga.py`) belum ada. Menjalankan turnamen dengan agen sementara akan menghasilkan angka yang tidak boleh masuk laporan. Dokumen ini menyiapkan langkahnya.
+**Status per 20 Oktober 2026: siap dijalankan.** Semua agen sudah ada di `main`: `random`, `greedy`, Model 1 (`minimax` = H2, `minimax_h1` = H1), Model 2 (`alphabeta` = H2, `alphabeta_h1` = H1), dan Model 3 (`ga`, bobot dari `results/ga_weights.json` hasil `python -m experiments.ga_train`). Bila bobot GA dilatih ulang, jalankan ulang turnamen. Dokumen ini menyiapkan langkahnya.
 
 ## 0. Prasyarat (centang semua sebelum mulai)
 
