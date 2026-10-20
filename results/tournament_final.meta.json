@@ -1,0 +1,49 @@
+{
+ "agent_specs": [
+  "random",
+  "greedy",
+  "minimax",
+  "minimax_h1",
+  "alphabeta",
+  "alphabeta_h1",
+  "ga"
+ ],
+ "agents": [
+  "random",
+  "greedy",
+  "minimax",
+  "minimax_h1",
+  "alphabeta",
+  "alphabeta_h1",
+  "ga"
+ ],
+ "depth": 4,
+ "distinct_openings": 299,
+ "games_expected": 12600,
+ "max_game_moves": 300,
+ "max_sow_rounds": 200,
+ "numpy": "2.5.4",
+ "opening_plies": 6,
+ "openings": 100,
+ "pairs": 21,
+ "platform": "Windows-11-10.0.26200-SP0",
+ "python": "3.12.10",
+ "requested_openings": 300,
+ "runs": [
+  {
+   "finished_at_utc": "2026-10-20T10:01:15+00:00",
+   "forfeits": 0,
+   "git_commit": "307fb3beef128e98d89bff6558c62c9c4742ebbe",
+   "git_dirty": false,
+   "played": 12600,
+   "skipped": 0,
+   "workers": 19
+  }
+ ],
+ "seeds": [
+  42,
+  123,
+  2026
+ ],
+ "time_limit": null
+}

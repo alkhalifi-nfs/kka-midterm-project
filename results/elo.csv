@@ -1,0 +1,8 @@
+agent,elo,ci_low,ci_high,n_games,score_rate,regularized,bootstrap_resamples,bootstrap_unit
+ga,1675.64,1662.14,1688.45,3600,0.667222,False,1000,game
+alphabeta,1663.41,1651.49,1676.88,3600,0.651667,False,1000,game
+minimax,1663.41,1651.49,1676.89,3600,0.651667,False,1000,game
+alphabeta_h1,1659.49,1646.78,1672.22,3600,0.646667,False,1000,game
+minimax_h1,1659.49,1646.12,1671.41,3600,0.646667,False,1000,game
+greedy,1198.95,1181.61,1216.35,3600,0.183472,False,1000,game
+random,979.61,953.73,1006.06,3600,0.052639,False,1000,game
