@@ -39,17 +39,38 @@ def test_registry_builds_baseline_agents():
     assert isinstance(registry.make_agent("greedy"), GreedyAgent)
 
 
-def test_registry_skips_missing_agents_with_warning(capsys):
-    usable = registry.usable_specs(["random", "minimax", "alphabeta", "ga", "greedy"])
+# Nama terdaftar yang modulnya sengaja tidak ada, agar tes "agen belum tersedia"
+# tidak bergantung pada agen teman mana yang sudah di-merge.
+MISSING = "belum_ada"
+
+
+@pytest.fixture
+def missing_agent(monkeypatch):
+    monkeypatch.setitem(registry.AGENT_SPECS, MISSING, ["src.agents.belum_ada:BelumAdaAgent"])
+    return MISSING
+
+
+def test_registry_skips_missing_agents_with_warning(capsys, missing_agent):
+    usable = registry.usable_specs(["random", missing_agent, "greedy"])
     assert usable == ["random", "greedy"]
-    err = capsys.readouterr().err
-    for name in ("minimax", "alphabeta", "ga"):
-        assert f"agen '{name}' dilewati" in err
+    assert f"agen '{missing_agent}' dilewati" in capsys.readouterr().err
 
 
-def test_registry_default_specs_lists_only_available(capsys):
+def test_registry_default_specs_lists_only_available(capsys, monkeypatch):
+    monkeypatch.setattr(registry, "AGENT_SPECS", {
+        "random": ["experiments.baseline_agents:RandomAgent"],
+        MISSING: ["src.agents.belum_ada:BelumAdaAgent"],
+        "greedy": ["experiments.baseline_agents:GreedyAgent"],
+    })
     assert registry.default_specs() == ["random", "greedy"]
     assert "dilewati" in capsys.readouterr().err
+
+
+def test_registry_builds_minimax():
+    from src.agents.minimax import MinimaxAgent, MinimaxH1Agent
+    assert isinstance(registry.make_agent("minimax"), MinimaxAgent)
+    agent = registry.make_agent("minimax_h1")
+    assert isinstance(agent, MinimaxH1Agent) and agent.heuristic == "h1"
 
 
 def test_registry_unknown_name_is_an_error():
@@ -285,18 +306,19 @@ def test_hit_move_cap_is_recorded(tmp_path, monkeypatch):
 
 # --- CLI -----------------------------------------------------------------------------------------------------
 
-def test_cli_main_runs_and_reports(tmp_path, capsys):
+def test_cli_main_runs_and_reports(tmp_path, capsys, missing_agent):
     out = str(tmp_path / "cli.csv")
-    code = tournament.main(["--agents", "random,greedy,minimax", "--openings", "2", "--seeds", "1,2",
-                            "--workers", "1", "--out", out])
+    code = tournament.main(["--agents", f"random,greedy,{missing_agent}", "--openings", "2",
+                            "--seeds", "1,2", "--workers", "1", "--out", out])
     assert code == 0
     assert len(read_rows(out)) == 8
-    assert "agen 'minimax' dilewati" in capsys.readouterr().err
+    assert f"agen '{missing_agent}' dilewati" in capsys.readouterr().err
 
 
-def test_cli_needs_two_agents(tmp_path):
+def test_cli_needs_two_agents(tmp_path, missing_agent):
     with pytest.raises(SystemExit, match="minimal 2"):
-        tournament.main(["--agents", "random,minimax", "--openings", "1", "--out", str(tmp_path / "x.csv")])
+        tournament.main(["--agents", f"random,{missing_agent}", "--openings", "1",
+                         "--out", str(tmp_path / "x.csv")])
 
 
 def test_cli_unknown_agent_is_a_clear_error(tmp_path):

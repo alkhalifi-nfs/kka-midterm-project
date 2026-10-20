@@ -10,6 +10,8 @@ from src.engine.api import (
     CongklakState, get_legal_moves, apply_move, is_terminal, get_scores,
     PLAYER_0
 )
+from src.agents.evaluation import evaluate
+from src.agents.minimax import MinimaxAgent as _Minimax
 
 
 def evaluate_state(state: CongklakState, perspective_player: int) -> int:
@@ -59,50 +61,21 @@ class GreedyAgent:
         return best_move
 
 
-class MinimaxAgent:
+class MinimaxAgent(_Minimax):
     """
-    Model 1: Depth-Limited Minimax dengan penanganan Non-Alternating Turn
-    (node MAX dapat bertransisi ke MAX jika mendapat extra-turn).
+    Model 1 dengan H1 dan antarmuka lama smoke test (select_move, nodes_expanded).
+    Implementasinya ada di src/agents/minimax.py.
     """
     def __init__(self, max_depth: int = 3):
+        super().__init__(depth=max_depth, heuristic="h1")
         self.max_depth = max_depth
-        self.nodes_expanded = 0
+
+    @property
+    def nodes_expanded(self) -> int:
+        return self.metrics.nodes
 
     def select_move(self, state: CongklakState) -> int:
-        self.nodes_expanded = 0
-        _, best_move = self._minimax(state, self.max_depth, state.current_player)
-        return best_move
-
-    def _minimax(
-        self, state: CongklakState, depth: int, root_player: int
-    ) -> Tuple[float, Optional[int]]:
-        self.nodes_expanded += 1
-        moves = get_legal_moves(state)
-
-        if depth == 0 or is_terminal(state) or not moves:
-            return float(evaluate_state(state, root_player)), None
-
-        is_maximizing = (state.current_player == root_player)
-        best_move = moves[0]
-
-        if is_maximizing:
-            max_eval = -math.inf
-            for move in moves:
-                next_state = apply_move(state, move)
-                eval_val, _ = self._minimax(next_state, depth - 1, root_player)
-                if eval_val > max_eval:
-                    max_eval = eval_val
-                    best_move = move
-            return max_eval, best_move
-        else:
-            min_eval = math.inf
-            for move in moves:
-                next_state = apply_move(state, move)
-                eval_val, _ = self._minimax(next_state, depth - 1, root_player)
-                if eval_val < min_eval:
-                    min_eval = eval_val
-                    best_move = move
-            return min_eval, best_move
+        return self.choose_move(state)
 
 
 class AlphaBetaAgent:
@@ -135,7 +108,8 @@ class AlphaBetaAgent:
         moves = get_legal_moves(state)
 
         if depth == 0 or is_terminal(state) or not moves:
-            return float(evaluate_state(state, root_player)), None
+            # Skor sama dengan Minimax (H1, terminal x1000) agar keputusan bisa dibandingkan.
+            return evaluate(state, root_player, "h1"), None
 
         is_maximizing = (state.current_player == root_player)
         best_move = moves[0]

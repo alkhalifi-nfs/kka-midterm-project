@@ -1,6 +1,6 @@
 # Runbook turnamen akhir (T37)
 
-**Status per 18 Oktober 2026: belum bisa dijalankan.** Agen resmi Minimax, Alpha-Beta, dan GA belum ada di repositori, dan PR #1 (engine) serta #2 (infrastruktur) belum di-merge. Menjalankan turnamen dengan agen sementara akan menghasilkan angka yang tidak boleh masuk laporan. Dokumen ini menyiapkan langkahnya.
+**Status per 20 Oktober 2026: belum bisa dijalankan.** Engine, infrastruktur turnamen, dan Model 1 Minimax (`minimax` = H2, `minimax_h1` = H1) sudah ada di `main`. Model 2 Alpha-Beta lengkap (`src/agents/alphabeta.py`) dan Model 3 GA (`src/agents/ga.py`) belum ada. Menjalankan turnamen dengan agen sementara akan menghasilkan angka yang tidak boleh masuk laporan. Dokumen ini menyiapkan langkahnya.
 
 ## 0. Prasyarat (centang semua sebelum mulai)
 

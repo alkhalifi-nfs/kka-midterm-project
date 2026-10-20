@@ -28,7 +28,8 @@ AGENT_SPECS: Dict[str, List[str]] = {
     # Untuk Random/Greedy resmi Ravy (T06): letakkan spesifikasinya SEBELUM baseline ini.
     "random": ["experiments.baseline_agents:RandomAgent"],
     "greedy": ["experiments.baseline_agents:GreedyAgent"],
-    "minimax": ["src.agents.minimax:MinimaxAgent"],
+    "minimax": ["src.agents.minimax:MinimaxAgent"],          # Model 1 dengan H2
+    "minimax_h1": ["src.agents.minimax:MinimaxH1Agent"],     # Model 1 dengan H1
     "alphabeta": ["src.agents.alphabeta:AlphaBetaAgent"],
     "ga": ["src.agents.ga:GAAgent"],
 }
