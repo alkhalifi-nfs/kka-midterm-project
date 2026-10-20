@@ -4,7 +4,7 @@ import random
 import numpy as np
 import pytest
 
-from src.agents.baseline_and_search import AlphaBetaAgent
+from src.agents.alphabeta import AlphaBetaAgent
 from src.agents.evaluation import evaluate
 from src.agents.minimax import MinimaxAgent, MinimaxH1Agent
 from src.engine.api import (
@@ -84,9 +84,10 @@ def test_depth_one_is_greedy_on_evaluation():
 
 def test_same_decision_as_alphabeta_with_h1():
     for state in random_positions(15, seed=21):
-        mm, ab = MinimaxH1Agent(depth=3), AlphaBetaAgent(max_depth=3)
-        assert mm.choose_move(state) == ab.select_move(state)
-        assert ab.nodes_expanded <= mm.metrics.nodes
+        mm = MinimaxH1Agent(depth=3)
+        ab = AlphaBetaAgent(depth=3, heuristic="h1", use_tt=False, iterative=False)
+        assert mm.choose_move(state) == ab.choose_move(state)
+        assert ab.metrics.nodes <= mm.metrics.nodes
 
 
 def test_agent_contract_and_metrics():

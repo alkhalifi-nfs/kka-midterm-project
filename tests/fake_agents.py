@@ -9,7 +9,7 @@ from src.engine.api import get_legal_moves
 
 
 class FirstMoveAgent:
-    """Selalu memilih lubang legal pertama. Metrics memakai nama alternatif (gaya SearchMetrics)."""
+    """Selalu memilih lubang legal pertama. Metrics memakai nama alternatif (nodes_expanded, max_depth_reached)."""
     name = "first"
 
     def __init__(self):

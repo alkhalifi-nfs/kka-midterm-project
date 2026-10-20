@@ -1,11 +1,8 @@
 """
-Agen dasar Random dan Greedy untuk menguji infrastruktur eksperimen.
+Agen pembanding dasar: Random dan Greedy.
 
-CATATAN: ini versi minimal untuk pengujian runner turnamen. Versi resmi Random
-dan Greedy milik Ravy (T06, folder src/agents) akan menggantikannya; saat itu
-tambahkan spesifikasi resminya di depan daftar "random"/"greedy" pada
-experiments/registry.py (AGENT_SPECS). Agen di sini mengikuti kontrak agen
-(lihat experiments/__init__.py).
+Keduanya tidak melakukan pencarian dan dipakai sebagai batas bawah kekuatan di
+turnamen. Agen di sini mengikuti kontrak agen (lihat experiments/__init__.py).
 """
 
 import random

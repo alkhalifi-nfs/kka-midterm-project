@@ -16,6 +16,5 @@ Opsional (dibaca lewat getattr, tanpa dependensi keras):
   - ``metrics``: objek (atau dict) yang menjelaskan pemanggilan ``choose_move``
     TERAKHIR (bukan akumulasi), dengan atribut ``nodes``, ``cutoffs``,
     ``depth_reached``, ``elapsed`` (detik). Nama alternatif yang juga dikenali:
-    ``nodes_expanded``, ``max_depth_reached``, ``execution_time_sec``
-    (sesuai ``src.utils.metrics.SearchMetrics``).
+    ``nodes_expanded``, ``max_depth_reached``, ``execution_time_sec``.
 """

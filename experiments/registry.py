@@ -1,8 +1,9 @@
 """
 Registry agen: pemetaan nama -> pabrik agen dengan lazy import.
 
-Modul agen baru diimpor hanya saat dibutuhkan, jadi agen yang belum ditulis
-teman (minimax, alphabeta, ga) cukup dilewati dengan peringatan, bukan error.
+Modul agen diimpor hanya saat dibutuhkan, jadi agen yang tidak bisa dibuat
+(misalnya `ga` sebelum results/ga_weights.json ada) cukup dilewati dengan
+peringatan, bukan error.
 
 Spesifikasi agen (string) yang diterima ``--agents`` pada turnamen:
   - ``random``                      nama terdaftar di AGENT_SPECS
@@ -22,12 +23,11 @@ import sys
 from typing import Callable, Dict, List, Optional, Tuple
 
 # Nama -> daftar kandidat "modul:Kelas" menurut prioritas; kandidat pertama yang
-# bisa diimpor dipakai. Nama modul/kelas agen resmi teman BELUM final; sesuaikan
-# entri berikut (atau pakai spesifikasi "alias=modul:Kelas") begitu agennya di-merge.
+# bisa diimpor dipakai. Agen lain bisa dipasang tanpa menyunting daftar ini lewat
+# spesifikasi "alias=modul:Kelas".
 AGENT_SPECS: Dict[str, List[str]] = {
-    # Untuk Random/Greedy resmi Ravy (T06): letakkan spesifikasinya SEBELUM baseline ini.
-    "random": ["experiments.baseline_agents:RandomAgent"],
-    "greedy": ["experiments.baseline_agents:GreedyAgent"],
+    "random": ["src.agents.baseline:RandomAgent"],
+    "greedy": ["src.agents.baseline:GreedyAgent"],
     "minimax": ["src.agents.minimax:MinimaxAgent"],          # Model 1 dengan H2
     "minimax_h1": ["src.agents.minimax:MinimaxH1Agent"],     # Model 1 dengan H1
     "alphabeta": ["src.agents.alphabeta:AlphaBetaAgent"],    # Model 2 dengan H2

@@ -5,7 +5,7 @@ import pytest
 
 import src.engine.api as engine_api
 from experiments import registry, tournament
-from experiments.baseline_agents import GreedyAgent, RandomAgent
+from src.agents.baseline import GreedyAgent, RandomAgent
 from experiments.tournament import COLUMNS, build_tasks, make_opening, play_game, run_tournament
 from src.engine.api import apply_move, get_initial_state, get_legal_moves, get_score_diff
 
@@ -40,7 +40,7 @@ def test_registry_builds_baseline_agents():
 
 
 # Nama terdaftar yang modulnya sengaja tidak ada, agar tes "agen belum tersedia"
-# tidak bergantung pada agen teman mana yang sudah di-merge.
+# tidak bergantung pada agen mana saja yang tersedia.
 MISSING = "belum_ada"
 
 
@@ -58,9 +58,9 @@ def test_registry_skips_missing_agents_with_warning(capsys, missing_agent):
 
 def test_registry_default_specs_lists_only_available(capsys, monkeypatch):
     monkeypatch.setattr(registry, "AGENT_SPECS", {
-        "random": ["experiments.baseline_agents:RandomAgent"],
+        "random": ["src.agents.baseline:RandomAgent"],
         MISSING: ["src.agents.belum_ada:BelumAdaAgent"],
-        "greedy": ["experiments.baseline_agents:GreedyAgent"],
+        "greedy": ["src.agents.baseline:GreedyAgent"],
     })
     assert registry.default_specs() == ["random", "greedy"]
     assert "dilewati" in capsys.readouterr().err
