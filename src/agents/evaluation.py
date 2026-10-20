@@ -97,3 +97,45 @@ def evaluate(state: CongklakState, me: int, heuristic: str = "h2") -> float:
     if heuristic == "h2":
         return h2(state, me)
     raise ValueError(f"Heuristik tidak dikenal: {heuristic!r} (pilihan: {', '.join(HEURISTICS)}).")
+
+
+# --- Fungsi evaluasi 6 fitur untuk Model 3 (laporan Bab 2.4.1) -----------------------------
+
+GA_FEATURES = ("f1 selisih lumbung", "f2 selisih biji di sisi", "f3 selisih peluang giliran tambahan",
+               "f4 peluang tembak agen", "f5 ancaman tembak lawan", "f6 selisih lubang aktif")
+
+# H2 sebagai titik di ruang 6 fitur: f4_H2 = f4 - f5 dan f6 tidak dipakai.
+# Karena itu bobot hasil GA dapat dibandingkan langsung dengan bobot manual H2 (RQ2).
+H2_AS_GA_WEIGHTS: Tuple[float, ...] = (1.0, 0.3, 0.5, 0.2, -0.2, 0.0)
+
+
+def ga_features(state: CongklakState, me: int) -> Tuple[int, int, int, int, int, int]:
+    """
+    (f1, ..., f6) dari sudut pandang `me`:
+      f1, f2, f3 sama dengan H2 (selisih agen - lawan);
+      f4 biji lawan di seberang lubang kosong agen (peluang tembak agen, agresif);
+      f5 biji agen di seberang lubang kosong lawan (ancaman tembak lawan, defensif);
+      f6 selisih jumlah lubang berisi (mobilitas).
+    """
+    _check_player(me)
+    b = state.board.tolist()
+    mine = _side_features(b, me)
+    theirs = _side_features(b, 1 - me)
+    active_mine = sum(1 for i in _PITS[me] if b[i] > 0)
+    active_theirs = sum(1 for i in _PITS[1 - me] if b[i] > 0)
+    return (mine[0] - theirs[0], mine[1] - theirs[1], mine[2] - theirs[2],
+            mine[3], theirs[3], active_mine - active_theirs)
+
+
+def weighted_evaluator(weights: Sequence[float]):
+    """Evaluator(state, me) untuk Alpha-Beta: skor terminal, selain itu sum(w_k * f_k)."""
+    weights = tuple(float(w) for w in weights)
+    if len(weights) != len(GA_FEATURES):
+        raise ValueError(f"Butuh {len(GA_FEATURES)} bobot, bukan {len(weights)}.")
+
+    def evaluator(state: CongklakState, me: int) -> float:
+        if is_terminal(state):
+            return float(terminal_score(state, me))
+        return float(sum(w * f for w, f in zip(weights, ga_features(state, me))))
+
+    return evaluator
