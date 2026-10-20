@@ -1,0 +1,4 @@
+agent,n_games,n_decisions,nodes_per_move,cutoffs_per_move,depth_reached_mean,time_per_move_s,metric_elapsed_per_move_s
+alphabeta,1200,17292,2043.378730,706.307310,14.884455,0.093534,0.093527
+ga,1200,17471,2080.072406,719.525900,14.655143,0.094831,0.094823
+minimax,1200,14570,3143.055868,0.000000,5.376184,0.090603,0.090593

@@ -1,0 +1,7 @@
+agent_row,agent_col,n_games,wins,draws,losses,win_rate,ci_low,ci_high
+alphabeta,ga,600,294,6,300,0.495000,0.455154,0.534910
+alphabeta,minimax,600,336,5,259,0.564167,0.524206,0.603311
+ga,alphabeta,600,300,6,294,0.505000,0.465090,0.544846
+ga,minimax,600,341,7,252,0.574167,0.534253,0.613137
+minimax,alphabeta,600,259,5,336,0.435833,0.396689,0.475794
+minimax,ga,600,252,7,341,0.425833,0.386863,0.465747

@@ -1,0 +1,4 @@
+agent,elo,ci_low,ci_high,n_games,score_rate,regularized,bootstrap_resamples,bootstrap_unit
+ga,1518.46,1504.91,1531.63,1200,0.539583,False,1000,game
+alphabeta,1513.79,1500.36,1526.37,1200,0.529583,False,1000,game
+minimax,1467.75,1454.23,1480.91,1200,0.430833,False,1000,game
